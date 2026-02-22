@@ -1,0 +1,38 @@
+:root {
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@media print {
+  .btn-group {
+    display: none !important;
+  }
+  .app-footer {
+    page-break-before: avoid;
+  }
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+  .card {
+    border: 1px solid #ccc !important;
+    background: white !important;
+  }
+  .result-box {
+    background: #f5f5f5 !important;
+  }
+  .value, .label {
+    color: #1a1a1a !important;
+  }
+}
