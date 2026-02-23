@@ -143,6 +143,98 @@ body {
   color: #34d399;
 }
 
+/* Conditions Toggle Button */
+.conditions-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px dashed rgba(96, 165, 250, 0.3);
+  border-radius: 8px;
+  color: #60a5fa;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.conditions-toggle:hover {
+  background: rgba(96, 165, 250, 0.18);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+/* Conditions Panel */
+.conditions-panel {
+  margin-top: 1rem;
+  padding: 1.2rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  border-radius: 10px;
+  text-align: right;
+  animation: fadeIn 0.3s ease;
+  cursor: default;
+}
+
+.conditions-panel h4 {
+  color: #a78bfa;
+  font-size: 0.92rem;
+  margin-bottom: 0.6rem;
+  margin-top: 1rem;
+}
+
+.conditions-panel h4:first-child {
+  margin-top: 0;
+}
+
+.conditions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem 0;
+}
+
+.conditions-list li {
+  position: relative;
+  padding: 0.5rem 1.4rem 0.5rem 0;
+  color: #cbd5e1;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+
+.conditions-list li:last-child {
+  border-bottom: none;
+}
+
+.conditions-list li::before {
+  content: '◆';
+  position: absolute;
+  right: 0;
+  color: #60a5fa;
+  font-size: 0.55rem;
+  top: 0.75rem;
+}
+
+.conditions-list li strong {
+  color: #f1f5f9;
+}
+
+.conditions-detail {
+  color: #94a3b8;
+  font-size: 0.83rem;
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(96, 165, 250, 0.05);
+  border-radius: 6px;
+  border-right: 3px solid rgba(96, 165, 250, 0.3);
+}
+
+.conditions-detail strong {
+  color: #e2e8f0;
+}
+
 /* Form Styling */
 .form-section {
   margin-bottom: 1.5rem;
