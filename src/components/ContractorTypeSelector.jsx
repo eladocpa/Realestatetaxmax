@@ -17,7 +17,7 @@ function ContractorTypeSelector({ onSelect }) {
         </p>
       </div>
 
-      <div className="type-selector">
+      <div className="type-selector type-selector-3">
         <div className="type-card" onClick={() => onSelect('operating')}>
           <div className="icon">🏗️</div>
           <h3>קבלן מבצע</h3>
@@ -150,6 +150,59 @@ function ContractorTypeSelector({ onSelect }) {
                 הוא &quot;היחידה התכנונית בגינה יש להוציא היתר בניה&quot; — כל
                 יחידה תכנונית שניתן להוציא עבורה היתר בניה נחשבת כבניין לצורך
                 הסעיף.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="type-card" onClick={() => onSelect('corporation')}>
+          <div className="icon">🏛️</div>
+          <h3>תאגיד / חברה</h3>
+          <div className="section-ref">מס חברות 23%</div>
+          <p>חברה בע"מ העוסקת בבניה. מס חברות בשיעור אחיד + מס על חלוקת דיבידנד.</p>
+          <ul className="features">
+            <li>מס חברות: 23% (שיעור אחיד)</li>
+            <li>ללא ביטוח לאומי ומס בריאות</li>
+            <li>מס על דיבידנד: 25% / 30%</li>
+            <li>בחירת סוג קבלן (מבצע / בונה)</li>
+            <li>השוואה אוטומטית ליחיד</li>
+          </ul>
+          <button
+            className="conditions-toggle"
+            onClick={(e) => toggleConditions(e, 'corporation')}
+          >
+            {expandedCard === 'corporation' ? 'הסתר פרטים ▲' : 'פרטים על מיסוי חברות ▼'}
+          </button>
+          {expandedCard === 'corporation' && (
+            <div className="conditions-panel" onClick={(e) => e.stopPropagation()}>
+              <h4>מיסוי חברה קבלנית</h4>
+              <ul className="conditions-list">
+                <li>
+                  <strong>מס חברות 23%</strong> — שיעור מס אחיד על הרווח
+                  החייב של החברה, ללא מדרגות מס
+                </li>
+                <li>
+                  <strong>ללא ביטוח לאומי ומס בריאות</strong> — החברה אינה
+                  משלמת ביטוח לאומי ומס בריאות על רווחיה (בניגוד לעצמאי)
+                </li>
+                <li>
+                  <strong>מס על דיבידנד</strong> — בעת חלוקת רווחים כדיבידנד,
+                  חל מס נוסף: 25% לבעל מניות רגיל, או 30% לבעל מניות מהותי
+                  (המחזיק מעל 10%)
+                </li>
+                <li>
+                  <strong>מס יסף</strong> — על הכנסות מעל ₪721,560 חל מס
+                  יסף בשיעור 3% נוסף
+                </li>
+              </ul>
+
+              <h4>מתי כדאי לפעול כחברה?</h4>
+              <p className="conditions-detail">
+                פעילות כחברה עשויה להיות כדאית כאשר הרווחים גבוהים ואין
+                צורך מיידי במשיכת כל הרווחים. שיעור המס האפקטיבי של חברה
+                (23%) נמוך משמעותית משיעורי המס הגבוהים ליחיד (עד 50%).
+                עם זאת, בעת משיכת הרווחים כדיבידנד חל מס נוסף.
+                המחשבון ישווה עבורך בין שתי החלופות.
               </p>
             </div>
           )}

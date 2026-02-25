@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ContractorTypeSelector from './components/ContractorTypeSelector';
 import OperatingContractorForm from './components/OperatingContractorForm';
 import BuildingContractorForm from './components/BuildingContractorForm';
+import CorporationForm from './components/CorporationForm';
 import TaxResults from './components/TaxResults';
 import './App.css';
 
@@ -35,6 +36,13 @@ function App() {
 
         {contractorType === 'building' && !results && (
           <BuildingContractorForm
+            onCalculate={setResults}
+            onBack={handleReset}
+          />
+        )}
+
+        {contractorType === 'corporation' && !results && (
+          <CorporationForm
             onCalculate={setResults}
             onBack={handleReset}
           />

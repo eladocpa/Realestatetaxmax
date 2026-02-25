@@ -34,39 +34,36 @@ function BuildingContractorForm({ onCalculate, onBack }) {
 
   const num = (v) => parseFloat(v) || 0;
 
+  const getPercentageResult = () => {
+    return calcBuildingContractorPercentage({
+      totalProjectedSales: num(totalProjectedSales),
+      accumulatedSales: num(accumulatedSales),
+      estimatedTotalCosts: num(estimatedTotalCosts),
+      actualCostsToDate: num(actualCostsToDate),
+      actualCostsPriorYears: num(actualCostsPriorYears),
+      revenueRecognizedPrior: num(revenueRecognizedPrior),
+      costsRecognizedPrior: num(costsRecognizedPrior),
+      isReadyForUse,
+      soldArea: num(soldArea),
+      totalArea: num(totalArea),
+      warrantyProvisionRate: num(warrantyRate) / 100,
+    });
+  };
+
+  const getSalesResult = () => {
+    return calcBuildingContractorSales({
+      salesRevenue: num(salesRevenue),
+      totalCosts: num(salesTotalCosts),
+      soldArea: num(salesSoldArea),
+      totalArea: num(salesTotalArea),
+      isReadyForUse: salesReadyForUse,
+      warrantyProvisionRate: num(warrantyRate) / 100,
+    });
+  };
+
   const handleCalculate = () => {
-    let revenueResult;
-
-    if (method === 'percentage') {
-      revenueResult = calcBuildingContractorPercentage({
-        totalProjectedSales: num(totalProjectedSales),
-        accumulatedSales: num(accumulatedSales),
-        estimatedTotalCosts: num(estimatedTotalCosts),
-        actualCostsToDate: num(actualCostsToDate),
-        actualCostsPriorYears: num(actualCostsPriorYears),
-        revenueRecognizedPrior: num(revenueRecognizedPrior),
-        costsRecognizedPrior: num(costsRecognizedPrior),
-        isReadyForUse,
-        soldArea: num(soldArea),
-        totalArea: num(totalArea),
-        warrantyProvisionRate: num(warrantyRate) / 100,
-      });
-    } else {
-      revenueResult = calcBuildingContractorSales({
-        salesRevenue: num(salesRevenue),
-        totalCosts: num(salesTotalCosts),
-        soldArea: num(salesSoldArea),
-        totalArea: num(salesTotalArea),
-        isReadyForUse: salesReadyForUse,
-        warrantyProvisionRate: num(warrantyRate) / 100,
-      });
-    }
-
-    const taxResult = calculateFullTax(
-      revenueResult.taxableIncome,
-      num(creditPoints),
-      isEarnedIncome
-    );
+    const revenueResult = method === 'percentage' ? getPercentageResult() : getSalesResult();
+    const taxResult = calculateFullTax(revenueResult.taxableIncome, num(creditPoints), isEarnedIncome);
 
     onCalculate({
       contractorType: 'building',
@@ -75,6 +72,45 @@ function BuildingContractorForm({ onCalculate, onBack }) {
       tax: taxResult,
     });
   };
+
+  const handleCompare = () => {
+    const percentageRevenue = getPercentageResult();
+    const salesRevResult = getSalesResult();
+
+    const cp = num(creditPoints);
+    const earned = isEarnedIncome;
+
+    const percentageTax = calculateFullTax(percentageRevenue.taxableIncome, cp, earned);
+    const salesTax = calculateFullTax(salesRevResult.taxableIncome, cp, earned);
+
+    const percentageTotalPayments = percentageTax.totalPayments;
+    const salesTotalPayments = salesTax.totalPayments;
+
+    let recommended;
+    if (percentageTotalPayments < salesTotalPayments) {
+      recommended = 'percentage';
+    } else if (salesTotalPayments < percentageTotalPayments) {
+      recommended = 'sales';
+    } else {
+      recommended = 'equal';
+    }
+
+    onCalculate({
+      contractorType: 'building',
+      method,
+      revenue: method === 'percentage' ? percentageRevenue : salesRevResult,
+      tax: method === 'percentage' ? percentageTax : salesTax,
+      methodComparison: {
+        percentage: { revenue: percentageRevenue, tax: percentageTax },
+        sales: { revenue: salesRevResult, tax: salesTax },
+        recommended,
+        savings: Math.abs(percentageTotalPayments - salesTotalPayments),
+      },
+    });
+  };
+
+  // Check if we have enough data for both methods
+  const hasBothMethodsData = num(totalProjectedSales) > 0 && num(salesRevenue) > 0;
 
   return (
     <div>
@@ -351,10 +387,24 @@ function BuildingContractorForm({ onCalculate, onBack }) {
           </div>
         </div>
 
+        {hasBothMethodsData && (
+          <div className="info-box" style={{ background: 'rgba(167, 139, 250, 0.08)', borderColor: 'rgba(167, 139, 250, 0.2)' }}>
+            <div className="info-title" style={{ color: '#a78bfa' }}>השוואת שיטות</div>
+            <p>
+              יש לך נתונים לשתי השיטות. לחץ על "השווה שיטות" כדי לראות איזו שיטה כדאית יותר מבחינת מס.
+            </p>
+          </div>
+        )}
+
         <div className="btn-group">
           <button className="btn btn-primary" onClick={handleCalculate}>
             חשב מס
           </button>
+          {hasBothMethodsData && (
+            <button className="btn btn-compare" onClick={handleCompare}>
+              השווה שיטות
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onBack}>
             חזור
           </button>

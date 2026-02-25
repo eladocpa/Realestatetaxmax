@@ -5,8 +5,6 @@ import {
   calculateFullTax,
 } from '../taxEngine';
 
-const formatNumber = (n) => new Intl.NumberFormat('he-IL').format(Math.round(n));
-
 function OperatingContractorForm({ onCalculate, onBack }) {
   const [method, setMethod] = useState('percentage'); // 'percentage' | 'cash'
   const [completionMethod, setCompletionMethod] = useState('cost'); // 'cost' | 'engineering'
@@ -29,31 +27,28 @@ function OperatingContractorForm({ onCalculate, onBack }) {
 
   const num = (v) => parseFloat(v) || 0;
 
+  const getPercentageResult = () => {
+    return calcOperatingContractorPercentage({
+      contractAmount: num(contractAmount),
+      estimatedTotalCosts: num(estimatedTotalCosts),
+      actualCostsToDate: num(actualCostsToDate),
+      actualCostsPriorYears: num(actualCostsPriorYears),
+      revenueRecognizedPrior: num(revenueRecognizedPrior),
+      completionMethod,
+      engineeringPct: num(engineeringPct),
+    });
+  };
+
+  const getCashResult = () => {
+    return calcOperatingContractorCash({
+      cashReceived: num(cashReceived),
+      expensesPaid: num(expensesPaid),
+    });
+  };
+
   const handleCalculate = () => {
-    let revenueResult;
-
-    if (method === 'percentage') {
-      revenueResult = calcOperatingContractorPercentage({
-        contractAmount: num(contractAmount),
-        estimatedTotalCosts: num(estimatedTotalCosts),
-        actualCostsToDate: num(actualCostsToDate),
-        actualCostsPriorYears: num(actualCostsPriorYears),
-        revenueRecognizedPrior: num(revenueRecognizedPrior),
-        completionMethod,
-        engineeringPct: num(engineeringPct),
-      });
-    } else {
-      revenueResult = calcOperatingContractorCash({
-        cashReceived: num(cashReceived),
-        expensesPaid: num(expensesPaid),
-      });
-    }
-
-    const taxResult = calculateFullTax(
-      revenueResult.taxableIncome,
-      num(creditPoints),
-      isEarnedIncome
-    );
+    const revenueResult = method === 'percentage' ? getPercentageResult() : getCashResult();
+    const taxResult = calculateFullTax(revenueResult.taxableIncome, num(creditPoints), isEarnedIncome);
 
     onCalculate({
       contractorType: 'operating',
@@ -63,6 +58,46 @@ function OperatingContractorForm({ onCalculate, onBack }) {
       tax: taxResult,
     });
   };
+
+  const handleCompare = () => {
+    const percentageRevenue = getPercentageResult();
+    const cashRevenue = getCashResult();
+
+    const cp = num(creditPoints);
+    const earned = isEarnedIncome;
+
+    const percentageTax = calculateFullTax(percentageRevenue.taxableIncome, cp, earned);
+    const cashTax = calculateFullTax(cashRevenue.taxableIncome, cp, earned);
+
+    const percentageTotalPayments = percentageTax.totalPayments;
+    const cashTotalPayments = cashTax.totalPayments;
+
+    let recommended;
+    if (percentageTotalPayments < cashTotalPayments) {
+      recommended = 'percentage';
+    } else if (cashTotalPayments < percentageTotalPayments) {
+      recommended = 'cash';
+    } else {
+      recommended = 'equal';
+    }
+
+    onCalculate({
+      contractorType: 'operating',
+      method,
+      completionMethod: method === 'percentage' ? completionMethod : null,
+      revenue: method === 'percentage' ? percentageRevenue : cashRevenue,
+      tax: method === 'percentage' ? percentageTax : cashTax,
+      methodComparison: {
+        percentage: { revenue: percentageRevenue, tax: percentageTax },
+        cash: { revenue: cashRevenue, tax: cashTax },
+        recommended,
+        savings: Math.abs(percentageTotalPayments - cashTotalPayments),
+      },
+    });
+  };
+
+  // Check if we have enough data for both methods
+  const hasBothMethodsData = num(contractAmount) > 0 && num(cashReceived) > 0;
 
   return (
     <div>
@@ -264,10 +299,24 @@ function OperatingContractorForm({ onCalculate, onBack }) {
           </div>
         </div>
 
+        {hasBothMethodsData && (
+          <div className="info-box" style={{ background: 'rgba(167, 139, 250, 0.08)', borderColor: 'rgba(167, 139, 250, 0.2)' }}>
+            <div className="info-title" style={{ color: '#a78bfa' }}>השוואת שיטות</div>
+            <p>
+              יש לך נתונים לשתי השיטות. לחץ על "השווה שיטות" כדי לראות איזו שיטה כדאית יותר מבחינת מס.
+            </p>
+          </div>
+        )}
+
         <div className="btn-group">
           <button className="btn btn-primary" onClick={handleCalculate}>
             חשב מס
           </button>
+          {hasBothMethodsData && (
+            <button className="btn btn-compare" onClick={handleCompare}>
+              השווה שיטות
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onBack}>
             חזור
           </button>

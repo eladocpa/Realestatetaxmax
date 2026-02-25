@@ -54,6 +54,9 @@ export const HEALTH_TAX = {
 // הפרשה לאחריות - עד 1.5% מעלויות הפרויקט
 export const WARRANTY_PROVISION_RATE = 0.015;
 
+// מס חברות 2026
+export const CORPORATE_TAX_RATE = 0.23; // 23% מס חברות
+
 /**
  * חישוב מס הכנסה לפי מדרגות
  */
@@ -447,8 +450,8 @@ export function calcBuildingContractorSales(params) {
 }
 
 /**
- * חישוב מס כולל - סיכום כולל
- * Full tax calculation summary
+ * חישוב מס כולל - סיכום כולל (יחיד)
+ * Full tax calculation summary (Individual)
  *
  * @param {number} taxableIncome - הכנסה חייבת
  * @param {number} creditPoints - נקודות זיכוי
@@ -470,6 +473,7 @@ export function calculateFullTax(taxableIncome, creditPoints = 2.25, isEarnedInc
   const netIncome = taxableIncome - totalPayments;
 
   return {
+    entityType: 'individual',
     taxableIncome,
     incomeTaxBeforeCredits: totalTax,
     creditPoints,
@@ -481,5 +485,77 @@ export function calculateFullTax(taxableIncome, creditPoints = 2.25, isEarnedInc
     effectiveRate: effectiveRate.toFixed(1),
     netIncome,
     breakdown,
+  };
+}
+
+/**
+ * חישוב מס חברות - תאגיד
+ * Corporate tax calculation
+ *
+ * חברה משלמת מס חברות בשיעור אחיד (23%) ללא ביטוח לאומי ומס בריאות.
+ * משיכת רווחים כדיבידנד חייבת במס נוסף (25% / 30% לבעל מניות מהותי).
+ *
+ * @param {number} taxableIncome - הכנסה חייבת
+ * @param {boolean} isMajorShareholder - האם בעל מניות מהותי (מעל 10%)
+ * @returns {object}
+ */
+export function calculateCorporateTax(taxableIncome, isMajorShareholder = true) {
+  const corporateTax = taxableIncome * CORPORATE_TAX_RATE;
+
+  // מס על דיבידנד (בהנחת חלוקה מלאה של הרווח)
+  const dividendRate = isMajorShareholder ? 0.30 : 0.25;
+  const profitAfterCorporateTax = taxableIncome - corporateTax;
+  const dividendTax = profitAfterCorporateTax * dividendRate;
+
+  // מס יסף על דיבידנד (אם ההכנסה מעל הסף)
+  let surtax = 0;
+  if (taxableIncome > SURTAX_THRESHOLD) {
+    surtax = profitAfterCorporateTax * SURTAX_RATE_EARNED;
+  }
+
+  const totalTaxWithDividend = corporateTax + dividendTax + surtax;
+  const effectiveRateCorporateOnly = taxableIncome > 0 ? (corporateTax / taxableIncome) * 100 : 0;
+  const effectiveRateWithDividend = taxableIncome > 0 ? (totalTaxWithDividend / taxableIncome) * 100 : 0;
+  const netIncomeAfterDividend = taxableIncome - totalTaxWithDividend;
+
+  return {
+    entityType: 'corporation',
+    taxableIncome,
+    corporateTax,
+    corporateTaxRate: CORPORATE_TAX_RATE,
+    profitAfterCorporateTax,
+    dividendRate,
+    dividendTax,
+    surtax,
+    isMajorShareholder,
+    totalTaxCorporateOnly: corporateTax,
+    totalTaxWithDividend,
+    effectiveRateCorporateOnly: effectiveRateCorporateOnly.toFixed(1),
+    effectiveRateWithDividend: effectiveRateWithDividend.toFixed(1),
+    netIncomeAfterDividend,
+    // שדות תואמים למבנה יחיד - לצורך השוואה
+    totalPayments: corporateTax,
+    effectiveRate: effectiveRateCorporateOnly.toFixed(1),
+    netIncome: profitAfterCorporateTax,
+  };
+}
+
+/**
+ * השוואת שיטות מיסוי - איזו שיטה כדאית יותר
+ * Compare tax methods - which method is more tax-efficient
+ *
+ * @param {object} method1Result - תוצאת שיטה 1 (כולל revenue ו-tax)
+ * @param {object} method2Result - תוצאת שיטה 2 (כולל revenue ו-tax)
+ * @returns {object} השוואה וההמלצה
+ */
+export function compareTaxMethods(method1Result, method2Result) {
+  const savings = method1Result.tax.totalPayments - method2Result.tax.totalPayments;
+  const recommended = savings > 0 ? 'method2' : savings < 0 ? 'method1' : 'equal';
+
+  return {
+    method1: method1Result,
+    method2: method2Result,
+    savings: Math.abs(savings),
+    recommended,
   };
 }

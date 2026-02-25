@@ -1,56 +1,283 @@
 const fmt = (n) => new Intl.NumberFormat('he-IL').format(Math.round(n));
-const fmtPct = (n) => `${n}%`;
 
 function TaxResults({ results, onReset }) {
-  const { contractorType, method, revenue, tax } = results;
+  const { contractorType, entityType, method, revenue, tax, comparison, methodComparison } = results;
 
   const isBuilding = contractorType === 'building';
+  const isCorporation = entityType === 'corporation';
   const isPercentage = method === 'percentage';
   const isCash = method === 'cash';
   const isSales = method === 'sales';
 
+  const contractorLabel = isBuilding ? 'קבלן בונה (יזם)' : 'קבלן מבצע';
+
   return (
     <div className="results-container">
+      {/* Method Comparison - Recommendation */}
+      {methodComparison && (
+        <div className="card">
+          <h2>המלצת שיטת דיווח</h2>
+
+          <div className="recommendation-box">
+            {methodComparison.recommended === 'equal' ? (
+              <p className="recommendation-text">
+                שתי השיטות מניבות תוצאה זהה מבחינת מס.
+              </p>
+            ) : (
+              <p className="recommendation-text">
+                <span className="recommendation-label">השיטה המומלצת:</span>{' '}
+                <strong className="recommended-method">
+                  {methodComparison.recommended === 'percentage' && 'שיטת שיעור השלמה'}
+                  {methodComparison.recommended === 'cash' && 'שיטת מזומנים'}
+                  {methodComparison.recommended === 'sales' && 'שיטת מכירות'}
+                </strong>
+                <br />
+                חיסכון של <strong>₪{fmt(methodComparison.savings)}</strong> בתשלומי מס
+              </p>
+            )}
+          </div>
+
+          <div className="comparison-grid">
+            {Object.entries(methodComparison).map(([key, val]) => {
+              if (key === 'recommended' || key === 'savings') return null;
+              const methodName = key === 'percentage' ? 'שיעור השלמה' : key === 'cash' ? 'מזומנים' : 'מכירות';
+              const isRecommended = methodComparison.recommended === key;
+
+              return (
+                <div key={key} className={`comparison-card ${isRecommended ? 'recommended' : ''}`}>
+                  {isRecommended && <div className="recommended-badge">מומלץ</div>}
+                  <h4>{methodName}</h4>
+                  <div className="comparison-details">
+                    <div className="comparison-row">
+                      <span>הכנסה חייבת</span>
+                      <span>₪{fmt(val.revenue.taxableIncome)}</span>
+                    </div>
+                    <div className="comparison-row">
+                      <span>מס הכנסה</span>
+                      <span>₪{fmt(val.tax.incomeTaxAfterCredits)}</span>
+                    </div>
+                    <div className="comparison-row">
+                      <span>ביטוח לאומי</span>
+                      <span>₪{fmt(val.tax.nationalInsurance)}</span>
+                    </div>
+                    <div className="comparison-row">
+                      <span>מס בריאות</span>
+                      <span>₪{fmt(val.tax.healthTax)}</span>
+                    </div>
+                    <div className="comparison-row total">
+                      <span>סה"כ תשלומים</span>
+                      <span>₪{fmt(val.tax.totalPayments)}</span>
+                    </div>
+                    <div className="comparison-row">
+                      <span>הכנסה נטו</span>
+                      <span>₪{fmt(val.tax.netIncome)}</span>
+                    </div>
+                    <div className="comparison-row">
+                      <span>שיעור מס אפקטיבי</span>
+                      <span>{val.tax.effectiveRate}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Corporate vs Individual Comparison */}
+      {isCorporation && comparison && (
+        <div className="card">
+          <h2>השוואת מיסוי: חברה מול יחיד</h2>
+
+          <div className="recommendation-box">
+            {comparison.corporate.totalPayments < comparison.individual.totalPayments ? (
+              <p className="recommendation-text">
+                <span className="recommendation-label">מיסוי כחברה כדאי יותר</span>
+                <br />
+                חיסכון במס חברות (ללא חלוקת דיבידנד): <strong>₪{fmt(comparison.individual.totalPayments - comparison.corporate.totalPayments)}</strong>
+                {comparison.corporate.totalTaxWithDividend < comparison.individual.totalPayments && (
+                  <>
+                    <br />
+                    גם עם חלוקת דיבידנד מלאה, החיסכון: <strong>₪{fmt(comparison.individual.totalPayments - comparison.corporate.totalTaxWithDividend)}</strong>
+                  </>
+                )}
+                {comparison.corporate.totalTaxWithDividend >= comparison.individual.totalPayments && (
+                  <>
+                    <br />
+                    <span style={{ color: '#fbbf24' }}>שימו לב: בעת חלוקת דיבידנד מלאה, המיסוי כיחיד עשוי להיות כדאי יותר</span>
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="recommendation-text">
+                <span className="recommendation-label">מיסוי כיחיד כדאי יותר</span>
+                <br />
+                חיסכון: <strong>₪{fmt(comparison.corporate.totalPayments - comparison.individual.totalPayments)}</strong> לעומת מס חברות
+              </p>
+            )}
+          </div>
+
+          <div className="comparison-grid">
+            {/* חברה */}
+            <div className={`comparison-card ${comparison.corporate.totalPayments <= comparison.individual.totalPayments ? 'recommended' : ''}`}>
+              {comparison.corporate.totalPayments <= comparison.individual.totalPayments && <div className="recommended-badge">כדאי יותר</div>}
+              <h4>חברה (מס חברות)</h4>
+              <div className="comparison-details">
+                <div className="comparison-row">
+                  <span>הכנסה חייבת</span>
+                  <span>₪{fmt(comparison.corporate.taxableIncome)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>מס חברות (23%)</span>
+                  <span>₪{fmt(comparison.corporate.corporateTax)}</span>
+                </div>
+                <div className="comparison-row total">
+                  <span>רווח לאחר מס חברות</span>
+                  <span>₪{fmt(comparison.corporate.profitAfterCorporateTax)}</span>
+                </div>
+                <div className="comparison-row" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <span>מס על דיבידנד ({(comparison.corporate.dividendRate * 100)}%)</span>
+                  <span>₪{fmt(comparison.corporate.dividendTax)}</span>
+                </div>
+                {comparison.corporate.surtax > 0 && (
+                  <div className="comparison-row" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                    <span>מס יסף (3%)</span>
+                    <span>₪{fmt(comparison.corporate.surtax)}</span>
+                  </div>
+                )}
+                <div className="comparison-row" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <span>סה"כ עם דיבידנד</span>
+                  <span>₪{fmt(comparison.corporate.totalTaxWithDividend)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>שיעור אפקטיבי (ברמת החברה)</span>
+                  <span>{comparison.corporate.effectiveRateCorporateOnly}%</span>
+                </div>
+                <div className="comparison-row" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <span>שיעור אפקטיבי (כולל דיבידנד)</span>
+                  <span>{comparison.corporate.effectiveRateWithDividend}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* יחיד */}
+            <div className={`comparison-card ${comparison.individual.totalPayments < comparison.corporate.totalPayments ? 'recommended' : ''}`}>
+              {comparison.individual.totalPayments < comparison.corporate.totalPayments && <div className="recommended-badge">כדאי יותר</div>}
+              <h4>יחיד (עצמאי)</h4>
+              <div className="comparison-details">
+                <div className="comparison-row">
+                  <span>הכנסה חייבת</span>
+                  <span>₪{fmt(comparison.individual.taxableIncome)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>מס הכנסה (אחרי זיכויים)</span>
+                  <span>₪{fmt(comparison.individual.incomeTaxAfterCredits)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>ביטוח לאומי</span>
+                  <span>₪{fmt(comparison.individual.nationalInsurance)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>מס בריאות</span>
+                  <span>₪{fmt(comparison.individual.healthTax)}</span>
+                </div>
+                <div className="comparison-row total">
+                  <span>סה"כ תשלומים</span>
+                  <span>₪{fmt(comparison.individual.totalPayments)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>הכנסה נטו</span>
+                  <span>₪{fmt(comparison.individual.netIncome)}</span>
+                </div>
+                <div className="comparison-row">
+                  <span>שיעור מס אפקטיבי</span>
+                  <span>{comparison.individual.effectiveRate}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="card">
         <h2>
-          {isBuilding ? 'קבלן בונה (יזם)' : 'קבלן מבצע'} - תוצאות חישוב
+          {isCorporation ? `תאגיד — ${contractorLabel}` : contractorLabel} - תוצאות חישוב
         </h2>
 
-        <div className="result-summary">
-          <div className="result-box">
-            <div className="label">הכנסה חייבת</div>
-            <div className={`value ${tax.taxableIncome > 0 ? 'highlight' : ''}`}>
-              ₪{fmt(tax.taxableIncome)}
+        {isCorporation ? (
+          <div className="result-summary">
+            <div className="result-box">
+              <div className="label">הכנסה חייבת</div>
+              <div className={`value ${tax.taxableIncome > 0 ? 'highlight' : ''}`}>
+                ₪{fmt(tax.taxableIncome)}
+              </div>
+            </div>
+            <div className="result-box">
+              <div className="label">מס חברות (23%)</div>
+              <div className="value negative">₪{fmt(tax.corporateTax)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">רווח אחרי מס חברות</div>
+              <div className={`value ${tax.profitAfterCorporateTax >= 0 ? 'positive' : 'negative'}`}>
+                ₪{fmt(tax.profitAfterCorporateTax)}
+              </div>
+            </div>
+            <div className="result-box">
+              <div className="label">מס על דיבידנד ({(tax.dividendRate * 100)}%)</div>
+              <div className="value negative">₪{fmt(tax.dividendTax)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">סה"כ מס (כולל דיבידנד)</div>
+              <div className="value negative">₪{fmt(tax.totalTaxWithDividend)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">נטו אחרי דיבידנד</div>
+              <div className={`value ${tax.netIncomeAfterDividend >= 0 ? 'positive' : 'negative'}`}>
+                ₪{fmt(tax.netIncomeAfterDividend)}
+              </div>
+            </div>
+            <div className="result-box">
+              <div className="label">שיעור אפקטיבי (חברה)</div>
+              <div className="value">{tax.effectiveRateCorporateOnly}%</div>
             </div>
           </div>
-          <div className="result-box">
-            <div className="label">מס הכנסה (אחרי זיכויים)</div>
-            <div className="value negative">₪{fmt(tax.incomeTaxAfterCredits)}</div>
-          </div>
-          <div className="result-box">
-            <div className="label">ביטוח לאומי</div>
-            <div className="value negative">₪{fmt(tax.nationalInsurance)}</div>
-          </div>
-          <div className="result-box">
-            <div className="label">מס בריאות</div>
-            <div className="value negative">₪{fmt(tax.healthTax)}</div>
-          </div>
-          <div className="result-box">
-            <div className="label">סה"כ תשלומים</div>
-            <div className="value negative">₪{fmt(tax.totalPayments)}</div>
-          </div>
-          <div className="result-box">
-            <div className="label">הכנסה נטו</div>
-            <div className={`value ${tax.netIncome >= 0 ? 'positive' : 'negative'}`}>
-              ₪{fmt(tax.netIncome)}
+        ) : (
+          <div className="result-summary">
+            <div className="result-box">
+              <div className="label">הכנסה חייבת</div>
+              <div className={`value ${tax.taxableIncome > 0 ? 'highlight' : ''}`}>
+                ₪{fmt(tax.taxableIncome)}
+              </div>
+            </div>
+            <div className="result-box">
+              <div className="label">מס הכנסה (אחרי זיכויים)</div>
+              <div className="value negative">₪{fmt(tax.incomeTaxAfterCredits)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">ביטוח לאומי</div>
+              <div className="value negative">₪{fmt(tax.nationalInsurance)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">מס בריאות</div>
+              <div className="value negative">₪{fmt(tax.healthTax)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">סה"כ תשלומים</div>
+              <div className="value negative">₪{fmt(tax.totalPayments)}</div>
+            </div>
+            <div className="result-box">
+              <div className="label">הכנסה נטו</div>
+              <div className={`value ${tax.netIncome >= 0 ? 'positive' : 'negative'}`}>
+                ₪{fmt(tax.netIncome)}
+              </div>
+            </div>
+            <div className="result-box">
+              <div className="label">שיעור מס אפקטיבי</div>
+              <div className="value">{tax.effectiveRate}%</div>
             </div>
           </div>
-          <div className="result-box">
-            <div className="label">שיעור מס אפקטיבי</div>
-            <div className="value">{tax.effectiveRate}%</div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Revenue Recognition Details */}
@@ -275,61 +502,109 @@ function TaxResults({ results, onReset }) {
 
       {/* Tax Breakdown */}
       <div className="card">
-        <h2>פירוט מס הכנסה - מדרגות 2026</h2>
+        <h2>{isCorporation ? 'פירוט מס חברות' : 'פירוט מס הכנסה - מדרגות 2026'}</h2>
 
-        <table className="tax-table">
-          <thead>
-            <tr>
-              <th>מדרגה</th>
-              <th>הכנסה במדרגה</th>
-              <th>שיעור</th>
-              <th>מס</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tax.breakdown.map((b, i) => (
-              <tr key={i}>
-                <td>₪{fmt(b.from)} - ₪{fmt(b.to)}</td>
-                <td>₪{fmt(b.taxableAmount)}</td>
-                <td>{(b.rate * 100).toFixed(0)}%</td>
-                <td>₪{fmt(b.tax)}</td>
+        {isCorporation ? (
+          <table className="tax-table">
+            <tbody>
+              <tr>
+                <td>הכנסה חייבת</td>
+                <td>₪{fmt(tax.taxableIncome)}</td>
               </tr>
-            ))}
-            <tr className="total-row">
-              <td colSpan="3">סה"כ מס הכנסה (לפני זיכויים)</td>
-              <td>₪{fmt(tax.incomeTaxBeforeCredits)}</td>
-            </tr>
-          </tbody>
-        </table>
+              <tr>
+                <td>מס חברות ({(tax.corporateTaxRate * 100)}%)</td>
+                <td>₪{fmt(tax.corporateTax)}</td>
+              </tr>
+              <tr className="total-row">
+                <td>רווח לאחר מס חברות</td>
+                <td>₪{fmt(tax.profitAfterCorporateTax)}</td>
+              </tr>
+              <tr>
+                <td colSpan="2" style={{ color: '#94a3b8', fontSize: '0.85rem', paddingTop: '1rem' }}>
+                  חישוב מס על דיבידנד (בהנחת חלוקה מלאה):
+                </td>
+              </tr>
+              <tr>
+                <td>מס על דיבידנד ({(tax.dividendRate * 100)}%{tax.isMajorShareholder ? ' — בעל מניות מהותי' : ''})</td>
+                <td>₪{fmt(tax.dividendTax)}</td>
+              </tr>
+              {tax.surtax > 0 && (
+                <tr>
+                  <td>מס יסף (3%)</td>
+                  <td>₪{fmt(tax.surtax)}</td>
+                </tr>
+              )}
+              <tr className="total-row">
+                <td>סה"כ מס (כולל דיבידנד)</td>
+                <td>₪{fmt(tax.totalTaxWithDividend)}</td>
+              </tr>
+              <tr>
+                <td>שיעור מס אפקטיבי (ברמת החברה)</td>
+                <td>{tax.effectiveRateCorporateOnly}%</td>
+              </tr>
+              <tr>
+                <td>שיעור מס אפקטיבי (כולל דיבידנד)</td>
+                <td>{tax.effectiveRateWithDividend}%</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <>
+            <table className="tax-table">
+              <thead>
+                <tr>
+                  <th>מדרגה</th>
+                  <th>הכנסה במדרגה</th>
+                  <th>שיעור</th>
+                  <th>מס</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tax.breakdown.map((b, i) => (
+                  <tr key={i}>
+                    <td>₪{fmt(b.from)} - ₪{fmt(b.to)}</td>
+                    <td>₪{fmt(b.taxableAmount)}</td>
+                    <td>{(b.rate * 100).toFixed(0)}%</td>
+                    <td>₪{fmt(b.tax)}</td>
+                  </tr>
+                ))}
+                <tr className="total-row">
+                  <td colSpan="3">סה"כ מס הכנסה (לפני זיכויים)</td>
+                  <td>₪{fmt(tax.incomeTaxBeforeCredits)}</td>
+                </tr>
+              </tbody>
+            </table>
 
-        <table className="tax-table" style={{ marginTop: '1rem' }}>
-          <tbody>
-            <tr>
-              <td>מס הכנסה לפני זיכויים</td>
-              <td>₪{fmt(tax.incomeTaxBeforeCredits)}</td>
-            </tr>
-            <tr>
-              <td>נקודות זיכוי ({tax.creditPoints} × ₪{fmt(2904)})</td>
-              <td>(₪{fmt(tax.creditAmount)})</td>
-            </tr>
-            <tr>
-              <td>מס הכנסה אחרי זיכויים</td>
-              <td>₪{fmt(tax.incomeTaxAfterCredits)}</td>
-            </tr>
-            <tr>
-              <td>ביטוח לאומי (עצמאי)</td>
-              <td>₪{fmt(tax.nationalInsurance)}</td>
-            </tr>
-            <tr>
-              <td>מס בריאות</td>
-              <td>₪{fmt(tax.healthTax)}</td>
-            </tr>
-            <tr className="total-row">
-              <td>סה"כ תשלומי מס ואגרות</td>
-              <td>₪{fmt(tax.totalPayments)}</td>
-            </tr>
-          </tbody>
-        </table>
+            <table className="tax-table" style={{ marginTop: '1rem' }}>
+              <tbody>
+                <tr>
+                  <td>מס הכנסה לפני זיכויים</td>
+                  <td>₪{fmt(tax.incomeTaxBeforeCredits)}</td>
+                </tr>
+                <tr>
+                  <td>נקודות זיכוי ({tax.creditPoints} × ₪{fmt(2904)})</td>
+                  <td>(₪{fmt(tax.creditAmount)})</td>
+                </tr>
+                <tr>
+                  <td>מס הכנסה אחרי זיכויים</td>
+                  <td>₪{fmt(tax.incomeTaxAfterCredits)}</td>
+                </tr>
+                <tr>
+                  <td>ביטוח לאומי (עצמאי)</td>
+                  <td>₪{fmt(tax.nationalInsurance)}</td>
+                </tr>
+                <tr>
+                  <td>מס בריאות</td>
+                  <td>₪{fmt(tax.healthTax)}</td>
+                </tr>
+                <tr className="total-row">
+                  <td>סה"כ תשלומי מס ואגרות</td>
+                  <td>₪{fmt(tax.totalPayments)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
       <div className="btn-group" style={{ justifyContent: 'center' }}>
