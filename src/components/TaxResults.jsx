@@ -1,7 +1,12 @@
+import { useState } from 'react';
+
 const fmt = (n) => new Intl.NumberFormat('he-IL').format(Math.round(n));
 
-function TaxResults({ results, onReset }) {
+function TaxResults({ results, onReset, savedId, savedName, onRename }) {
   const { contractorType, entityType, method, revenue, tax, comparison, methodComparison } = results;
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(savedName || '');
 
   const isBuilding = contractorType === 'building';
   const isCorporation = entityType === 'corporation';
@@ -11,8 +16,53 @@ function TaxResults({ results, onReset }) {
 
   const contractorLabel = isBuilding ? 'קבלן בונה (יזם)' : 'קבלן מבצע';
 
+  const handleSaveName = () => {
+    onRename(nameInput.trim());
+    setEditingName(false);
+  };
+
   return (
     <div className="results-container">
+      {/* Saved indicator + project name */}
+      <div className="card saved-indicator-card">
+        <div className="saved-indicator">
+          <span className="saved-indicator-icon">&#10003;</span>
+          <span>החישוב נשמר אוטומטית</span>
+        </div>
+        <div className="project-name-row">
+          {editingName ? (
+            <div className="edit-name-row">
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                placeholder="הזן שם לפרויקט..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') setEditingName(false);
+                }}
+              />
+              <button className="btn btn-sm btn-primary" onClick={handleSaveName}>שמור</button>
+              <button className="btn btn-sm btn-secondary" onClick={() => setEditingName(false)}>ביטול</button>
+            </div>
+          ) : (
+            <div className="project-name-display">
+              <span className="project-name-label">
+                {savedName ? savedName : 'ללא שם'}
+              </span>
+              <button
+                className="btn-icon"
+                onClick={() => { setNameInput(savedName || ''); setEditingName(true); }}
+                title="שנה שם פרויקט"
+              >
+                &#9998;
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Method Comparison - Recommendation */}
       {methodComparison && (
         <div className="card">
